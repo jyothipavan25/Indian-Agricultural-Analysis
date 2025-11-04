@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>India Map Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
+    <link rel="stylesheet"href="css/mapstyle.css" > 
+    
+</head>
+<body>
+    <nav class="navbar navbar-light bg-light">
+        <form class="form-inline">
+            <a class="btn btn-outline-success" href="barplot.html" role="button">Production Bar Plot</a>
+            <a class="btn btn-sm btn-outline-secondary" href="yeildbubbleplot.html" role="button">Yeild Bubble Plot</a>
+        </form>
+    </nav>
+    
+<input type="button" value="Rice" id="riceButton" class="button1">
+<input type="button" value="Wheat" id="wheatButton" class="button1">
+<input type="button" value="Kharif Sorghum" id="kharifSorghumButton" class="button1">
+<input type="button" value="Rabi Sorghum" id="rabiSorghumButton" class="button1">
+<input type="button" value="Sorghum" id="sorghumButton" class="button1">
+<input type="button" value="Pearl Millet" id="pearlMilletButton" class="button1">
+<input type="button" value="Maize" id="maizeButton" class="button1">
+<input type="button" value="Finger Millet" id="fingerMilletButton" class="button1">
+<div id="container">
+    <svg id="canvas" viewBox="0 0 1000 800">
+    </svg>
+</div>
+
+
+    <script >// Event listeners for each crop button
+        document.getElementById("riceButton").addEventListener("click", function() {
+            createMap("Rice");
+        });
+        
+        document.getElementById("wheatButton").addEventListener("click", function() {
+            createMap("Wheat");
+        });
+        
+        document.getElementById("kharifSorghumButton").addEventListener("click", function() {
+            createMap("Kharif Sorghum");
+        });
+        
+        document.getElementById("rabiSorghumButton").addEventListener("click", function() {
+            createMap("Rabi Sorghum");
+        });
+        
+        document.getElementById("sorghumButton").addEventListener("click", function() {
+            createMap("Sorghum");
+        });
+        
+        document.getElementById("pearlMilletButton").addEventListener("click", function() {
+            createMap("Pearl Millet");
+        });
+        
+        document.getElementById("maizeButton").addEventListener("click", function() {
+            createMap("Maize");
+        });
+        
+        document.getElementById("fingerMilletButton").addEventListener("click", function() {
+            createMap("Finger Millet");
+        });
+        
+        // Initially create map with default crop data (Rice)
+        createMap("Rice");
+        
+        
+         
+        function createMap(cropType) {
+            Promise.all([
+                d3.json("https://raw.githubusercontent.com/umassdgithub/Week-6-Part-D3_Geospatial/main/Example%204%20-%20Map%20of%20india/data/inida_topojson.json"),
+                d3.csv("https://raw.githubusercontent.com/SaiBharadwaj302/Indian-Agriculture-analysis/main/data/ICRISAT-District%20Level%20Data.csv")
+            ]).then(([topojsonData, csvData]) => {
+                // Process your data here
+                let areaData;
+                switch(cropType) {
+                    case "Rice":
+                        areaData = csvData.map(d => +d['RICE AREA (1000 ha)']);
+                        break;
+                    case "Wheat":
+                        areaData = csvData.map(d => +d['WHEAT AREA (1000 ha)']);
+                        break;
+                    case "Kharif Sorghum":
+                        areaData = csvData.map(d => +d['KHARIF SORGHUM AREA (1000 ha)']);
+                        break;
+                    case "Rabi Sorghum":
+                        areaData = csvData.map(d => +d['RABI SORGHUM AREA (1000 ha)']);
+                        break;
+                    case "Sorghum":
+                        areaData = csvData.map(d => +d['SORGHUM AREA (1000 ha)']);
+                        break;
+                    case "Pearl Millet":
+                        areaData = csvData.map(d => +d['PEARL MILLET AREA (1000 ha)']);
+                        break;
+                    case "Maize":
+                        areaData = csvData.map(d => +d['MAIZE AREA (1000 ha)']);
+                        break;
+                    case "Finger Millet":
+                        areaData = csvData.map(d => +d['FINGER MILLET AREA (1000 ha)']);
+                        break;
+                    default:
+                        areaData = []; // Default to empty data
+                }
+            
+        
+                // Find maximum and minimum values of area data
+                let maxArea = d3.max(areaData);
+                let minArea = d3.min(areaData);
+
+                console.log(maxArea);
+        console.log(minArea);
+                // Create a quantize color scale based on area values
+                const colorScale = d3.scaleQuantize()
+                    .domain([minArea, maxArea])
+                    .range(["#FBCEB1","#E49B0F","#DAA06D", "#FFAC1C", "#CC5500","#FF5349", "#8B4000"]);
+                    
+        
+                // Verify TopoJSON data
+                let objectName = "IND_adm2-1"; // Update with actual object name
+                let geoJson = topojson.feature(topojsonData, topojsonData.objects[objectName]).features;
+        
+                // Projection and geo generator
+                const projection = d3.geoEquirectangular().fitSize([700,700], topojson.feature(topojsonData, topojsonData.objects[objectName]));
+                let geoGenerator = d3.geoPath(projection);
+        
+                // SVG container
+                d3.select('svg').remove()
+                let svg = d3.select('body')
+                    .append('svg')
+                    .attr('width', 1200)
+                    .attr('height', 1000);
+        
+                // Map canvas
+                let mapCanvas = svg.append('g');    
+        
+                // Draw map paths with colors based on area data
+                mapCanvas.selectAll('path')
+                    .data(geoJson)
+                    .enter()
+                    .append('path')
+                    .attr("class", "path_geo")
+                    .attr("d", geoGenerator)
+                    .style("fill", (d, i) => colorScale(areaData[i]))
+                    .transition() // Add a transition to the map paths
+                    .duration(1000) // Set the duration of the transition in milliseconds
+                    .ease(d3.easeCubicInOut) // Use a cubic-in-out easing function for smoother transition
+                    .attr("opacity", 1); // Optionally, you can animate the opacity or other attributes
+                    
+               
+        
+        
+                // Legend
+                let legend = svg.append('g')
+                    .attr('class', 'legend')
+                    .attr('transform', 'translate(20, 20)');
+        
+                let legendScale = d3.scaleLinear()
+                    .domain([minArea, maxArea])
+                    .range([0, 100]);
+        
+                let legendAxis = d3.axisBottom(legendScale)
+                    .ticks(5)
+                    
+                    .tickFormat(d => d.toFixed(0));
+        
+                legend.append('g')
+                    .attr('transform', `translate(0, 20)`)
+                    .call(legendAxis);
+        
+                let legendColors = ["#FBCEB1","#DAA06D", "#FFAC1C", "#CC5500","#FF5349", "#8B4000"];
+                let legendWidth = 20;
+        
+                legend.selectAll('rect')
+                    .data(legendColors)
+                    .enter()
+                    .append('rect')
+                    .attr('x', (d, i) => i * legendWidth)
+                    .attr('y', 30)
+                    .attr('width', legendWidth)
+                    .attr('height', 10)
+                    .attr('fill', d => d);
+        
+                // Add legend labels
+                legend.append('text')
+                    .attr('x', 0)
+                    .attr('y', 60)
+                    .attr("class","text")
+                    .attr('dy', '0.35em')
+                    .text(minArea);
+        
+                legend.append('text')
+                    .attr('x', legendWidth * 5)
+                    .attr('y', 60)
+                    .attr("class","text")
+                    .attr('dy', '0')
+                    .text(maxArea);
+        
+        
+            });
+        }
+          /*  svg
+        .call(
+            d3.zoom()
+                .extent([[0,0],[1000,800]])
+                .scaleExtent([0,8])
+                .on("zoom",zoomed) // when the zoom even is triggered, zoomed function runs
+        )
+        function zoomed({transform}){
+        mapCanvas.attr("transform",transform); // when zoom function runs, it updates the transform of the mapCancas
+        }
+        }*/
+        
+        </script>
+        
+    
+</body>
+</html>

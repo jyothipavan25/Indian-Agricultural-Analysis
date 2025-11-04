@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rice Production Bar Plot</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <input type="button" value="Rice" id="riceButton" class="button1">
+    <input type="button" value="Wheat" id="wheatButton" class="button1">
+    <input type="button" value="Kharif Sorghum" id="kharifSorghumButton" class="button1">
+    <input type="button" value="Rabi Sorghum" id="rabiSorghumButton" class="button1">
+    <input type="button" value="Sorghum" id="sorghumButton" class="button1">
+    <input type="button" value="Pearl Millet" id="pearlMilletButton" class="button1">
+    <input type="button" value="Maize" id="maizeButton" class="button1">
+    <input type="button" value="Finger Millet" id="fingerMilletButton" class="button1">
+    <div id="container">
+        <svg id="canvas" viewBox="0 0 1000 800"></svg>
+    </div>
+
+    <script>
+        // Event listeners for each crop button
+        document.getElementById("riceButton").addEventListener("click", function() {
+            createBarplot("Rice");
+        });
+
+        document.getElementById("wheatButton").addEventListener("click", function() {
+            createBarplot("Wheat");
+        });
+
+        document.getElementById("kharifSorghumButton").addEventListener("click", function() {
+            createBarplot("Kharif Sorghum");
+        });
+
+        document.getElementById("rabiSorghumButton").addEventListener("click", function() {
+            createBarplot("Rabi Sorghum");
+        });
+
+        document.getElementById("sorghumButton").addEventListener("click", function() {
+            createBarplot("Sorghum");
+        });
+
+        document.getElementById("pearlMilletButton").addEventListener("click", function() {
+            createBarplot("Pearl Millet");
+        });
+
+        document.getElementById("maizeButton").addEventListener("click", function() {
+            createBarplot("Maize");
+        });
+
+        document.getElementById("fingerMilletButton").addEventListener("click", function() {
+            createBarplot("Finger Millet");
+        });
+
+        // Initially create map with default crop data (Rice)
+        createBarplot("Rice");
+        function createBarplot(cropType) {
+    d3.csv("https://raw.githubusercontent.com/SaiBharadwaj302/Indian-Agriculture-analysis/main/data/ICRISAT-District%20Level%20Data.csv").then(csvData => {
+        // Process your data here
+        let barData;
+        let productionProperty;
+
+        switch(cropType) {
+            case "Rice":
+                productionProperty = 'RICE PRODUCTION (1000 tons)';
+                break;
+            case "Wheat":
+                productionProperty = 'WHEAT PRODUCTION (1000 tons)';
+                break;
+            case "Kharif Sorghum":
+                productionProperty = 'KHARIF SORGHUM PRODUCTION (1000 tons)';
+                break;
+            case "Rabi Sorghum":
+                productionProperty = 'RABI SORGHUM PRODUCTION (1000 tons)';
+                break;
+            case "Sorghum":
+                productionProperty = 'SORGHUM PRODUCTION (1000 tons)';
+                break;
+            case "Pearl Millet":
+                productionProperty = 'PEARL MILLET PRODUCTION (1000 tons)';
+                break;
+            case "Maize":
+                productionProperty = 'MAIZE PRODUCTION (1000 tons)';
+                break;
+            case "Finger Millet":
+                productionProperty = 'FINGER MILLET PRODUCTION (1000 tons)';
+                break;
+            default:
+                console.error("Invalid crop type.");
+                return;
+        }
+
+        // Extract State Name data
+        const stateData = csvData.map(d => d['StateName']);
+        const productionData = csvData.map(d => +d[productionProperty]);
+
+        // Calculate the maximum value of crop production
+        const maxProduction = d3.max(productionData);
+
+        // Set up SVG dimensions
+        const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+        const width = 600 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+
+        // Remove existing SVG if any
+        d3.select("svg").remove();
+
+        // Create SVG container
+        const svg = d3.select("#container").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Define scales
+        const xScale = d3.scaleBand()
+            .domain(stateData)
+            .range([0, width])
+            .padding(0.1);
+
+        const yScale = d3.scaleLinear()
+            .domain([0, maxProduction])
+            .range([height, 0]);
+
+        // Create bars
+        svg.selectAll(".bar")
+        .data(csvData)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", d => xScale(d['StateName']))
+        .attr("y", height) // Start from the bottom
+        .attr("width", xScale.bandwidth())
+        .attr("height", 0) // Start with zero height
+        .attr("fill", "steelblue")
+        .transition()
+        .delay((d, i) => i/10 ) 
+        .duration(800) // Transition duration
+        .ease(d3.easeCubicInOut) // Use a smoother ease function
+        .attr("y", d => yScale(+d[productionProperty]))
+        .attr("height", d => {
+            const barHeight = height - yScale(+d[productionProperty]);
+            return barHeight > 0 ? barHeight : 0;
+    }); // Bar grows from bottom to top
+
+            
+
+        // Add x-axis
+        svg.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xScale))
+        .selectAll("text")
+        .attr("transform", "rotate(-90)")
+        .style("text-anchor", "end")
+        .attr("opacity", 0) // Set initial opacity to 0
+        .transition() // Add transition to the x-axis
+        .delay(500) // Delay the start of the transition by 500 milliseconds
+        .duration(1000) // Set the duration of the transition in milliseconds
+        .ease(d3.easeCubicInOut)
+        .attr("opacity", 1); // Gradually increase the opacity to 1
+
+
+        // Add y-axis
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(yScale))
+            .transition() // Add transition to the x-axis
+            .duration(1000) // Set the duration of the transition in milliseconds
+            .ease(d3.easeCubicInOut)
+            .attr("opacity", 1); 
+
+
+        // Add y-axis label
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0 - margin.left)
+            .attr("x", 0 - (height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text(`${cropType.toUpperCase()} PRODUCTION (1000 tons)`);
+
+        // Add title
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text(`Max ${cropType.toUpperCase()} Production by State`);
+    }).catch(error => {
+        console.error("Error loading CSV data:", error);
+    });
+}
+
+               
+
+        
+    </script>
+</body>
+</html>
